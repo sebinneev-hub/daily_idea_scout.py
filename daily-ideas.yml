@@ -1,0 +1,35 @@
+# Save as .github/workflows/daily-ideas.yml in your GitHub repo.
+# Add these in Repo > Settings > Secrets and variables > Actions:
+#   ANTHROPIC_API_KEY, EMAIL_FROM, EMAIL_APP_PASSWORD, EMAIL_TO
+name: Daily Kerala-NZ ideas
+
+on:
+  schedule:
+    - cron: "30 1 * * *"   # 01:30 UTC = 07:00 IST every day
+  workflow_dispatch:         # lets you run it manually to test
+
+permissions:
+  contents: write            # needed to save ideas_history.json
+
+jobs:
+  scout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install anthropic
+      - run: python daily_idea_scout.py
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_APP_PASSWORD: ${{ secrets.EMAIL_APP_PASSWORD }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+      - name: Save history so ideas don't repeat
+        run: |
+          git config user.name "idea-bot"
+          git config user.email "idea-bot@users.noreply.github.com"
+          git add ideas_history.json
+          git commit -m "Update ideas history" || echo "No changes"
+          git push
